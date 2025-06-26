@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kris Tech Admin Panel</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+  <style>
+    body { background: #f1f1f1; font-family: sans-serif; }
+    .container { max-width: 800px; margin-top: 50px; }
+    #loginSection, #adminSection { display: none; }
+    table td, table th { vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2 class="text-center mb-4">Kris Tech Admin Panel</h2>
+
+  <!-- Login Form -->
+  <div id="loginSection">
+    <div class="card p-4">
+      <h5>Admin Login</h5>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="adminEmail" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="adminPassword" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
+        <div id="loginStatus" class="mt-2 text-danger small text-center"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="adminSection">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>Submitted Inquiries</h4>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+    </div>
+    <table class="table table-bordered bg-white">
+      <thead class="thead-dark">
+        <tr>
+          <th>Service</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Message</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="inquiryTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAoZWQtBzdvipLlw2FWzoexyqLtK_gxr1g",
+    authDomain: "kris-tech.firebaseapp.com",
+    databaseURL: "https://kris-tech-default-rtdb.firebaseio.com",
+    projectId: "kris-tech",
+    storageBucket: "kris-tech.firebasestorage.app",
+    messagingSenderId: "105383566272",
+    appId: "1:105383566272:web:e42f7cc7de92fa5ab10625"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  const loginSection = document.getElementById('loginSection');
+  const adminSection = document.getElementById('adminSection');
+  const inquiryTableBody = document.getElementById('inquiryTableBody');
+  const loginForm = document.getElementById('loginForm');
+  const loginStatus = document.getElementById('loginStatus');
+
+  // Show login form initially
+  loginSection.style.display = 'block';
+
+  // Handle login
+  loginForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = document.getElementById('adminEmail').value;
+    const password = document.getElementById('adminPassword').value;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      loginStatus.textContent = 'Invalid email or password';
+    }
+  });
+
+  // Auth state listener
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      loginSection.style.display = 'none';
+      adminSection.style.display = 'block';
+      fetchInquiries();
+    } else {
+      loginSection.style.display = 'block';
+      adminSection.style.display = 'none';
+    }
+  });
+
+  // Fetch inquiries from database
+  function fetchInquiries() {
+    const inquiryRef = ref(db, 'inquiries');
+    onValue(inquiryRef, snapshot => {
+      inquiryTableBody.innerHTML = '';
+      const data = snapshot.val();
+      if (data) {
+        Object.values(data).reverse().forEach(entry => {
+          const row = `
+            <tr>
+              <td>${entry.project}</td>
+              <td>${entry.name}</td>
+              <td>${entry.email}</td>
+              <td>${entry.phone}</td>
+              <td>${entry.message}</td>
+              <td>${new Date(entry.timestamp).toLocaleString()}</td>
+            </tr>
+          `;
+          inquiryTableBody.innerHTML += row;
+        });
+      }
+    });
+  }
+
+  // Logout function
+  window.logout = () => signOut(auth);
+</script>
+
+</body>
+</html>
